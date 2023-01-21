@@ -1,0 +1,2 @@
+pyinstaller-versionfile==2.1.1
+pyinstaller==3.5

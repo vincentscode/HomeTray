@@ -1,15 +1,20 @@
-import wx.adv
-import wx
-
-import requests
-import json
 import sched
 import time
+import configparser
+import wx
+import wx.adv
 from _thread import start_new_thread
 from homeassistant_api import Client
-import configparser
 
-icon_base = "icons/"
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
+icon_base = resource_path('icons/')
 icons = {
     "default": {
         "on": "on.png",
@@ -72,7 +77,6 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
         start_new_thread(self.scheduler.run, ())
 
         self.Bind(wx.adv.EVT_TASKBAR_LEFT_DOWN, self.on_left_down)
-        # self.Bind(wx.adv.EVT_TASKBAR_RIGHT_DOWN, self.on_right_down)
 
         self.update_state()
 
@@ -88,7 +92,7 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
             else:
                 rgb_color = [253, 213, 27]
         else:
-            rgb_color = [0, 0, 0] # or [225, 225, 225]
+            rgb_color = [225, 225, 225]
 
         icon = get_icon_path(entity_icon, entity_state)
         self.set_icon(icon, entity_name)
@@ -184,7 +188,7 @@ class App(wx.App):
     def OnExit(self):
         for tray_icon in self.tray_icons:
             tray_icon.cleanup()
-        
+
         return 0
 
 def main():
