@@ -6,8 +6,8 @@ import json
 import sched
 import time
 from _thread import start_new_thread
-from config import token, api_url
 from homeassistant_api import Client
+import configparser
 
 target_domain = "light"
 entity_ignore_list = [
@@ -120,11 +120,30 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
         wx.CallAfter(self.Destroy)
         self.frame.Close()
 
+def ask(parent=None, message='', default_value=''):
+    dlg = wx.TextEntryDialog(parent, message, caption="Initial Setup", value=default_value)
+    dlg.ShowModal()
+    result = dlg.GetValue()
+    dlg.Destroy()
+    return result
+
 class App(wx.App):
     def OnInit(self):
         # init GUI
         self.frame = wx.Frame(None)
         self.SetTopWindow(self.frame)
+
+        config = configparser.ConfigParser()
+        try:
+            config.read('config.ini')
+            token = config['HASS']['Token']
+            api_url = config['HASS']['ApiUrl']
+        except KeyError:
+            config['HASS'] = {}
+            token = config['HASS']['Token'] = ask(message='Please enter your Home Assistant Long-Lived Access Token. You can generate it at https://my.home-assistant.io/redirect/profile/.')
+            api_url = config['HASS']['ApiUrl'] = ask(message='Please enter Home Assistant API Url. It should look something like this: http://192.168.0.125:8123/api')
+            with open('config.ini', 'w') as configfile:
+                config.write(configfile)
 
         # init hass client
         client = Client(api_url, token, cache_session=False)
