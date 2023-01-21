@@ -9,11 +9,6 @@ from _thread import start_new_thread
 from homeassistant_api import Client
 import configparser
 
-target_domain = "light"
-entity_ignore_list = [
-    "living_room_lights"
-]
-
 icon_base = "icons/"
 icons = {
     "default": {
@@ -84,7 +79,7 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
     def update_state(self):
         entity = self.client.get_entity(entity_id=self.entity_id)
         entity_state = entity.state.state
-        entity_icon = entity.state.attributes["icon"]
+        entity_icon = entity.state.attributes["icon"] if "icon" in entity.state.attributes else "default"
         entity_name = entity.state.attributes["friendly_name"]
 
         if entity_state == "on":
@@ -105,7 +100,7 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
 
     def on_left_down(self, event):
         self.update_state()
-        light = self.client.get_domain(target_domain)
+        light = self.client.get_domain('homeassistant')
         light.toggle(entity_id=self.entity_id)
         print(self.entity_id, "toggle")
         time.sleep(0.1)
@@ -138,24 +133,20 @@ class App(wx.App):
             config.read('config.ini')
             token = config['HASS']['Token']
             api_url = config['HASS']['ApiUrl']
+            entities = config['HASS']['Entities']
         except KeyError:
             config['HASS'] = {}
             token = config['HASS']['Token'] = ask(message='Please enter your Home Assistant Long-Lived Access Token. You can generate it at https://my.home-assistant.io/redirect/profile/.')
             api_url = config['HASS']['ApiUrl'] = ask(message='Please enter Home Assistant API Url. It should look something like this: http://192.168.0.125:8123/api')
+            entities = config['HASS']['Entities'] = ask(message='Please enter the IDs (seperated by a comma) of the entities you like to add.')
             with open('config.ini', 'w') as configfile:
                 config.write(configfile)
 
         # init hass client
         client = Client(api_url, token, cache_session=False)
-        entities = client.get_entities()[target_domain].entities
 
-        # init task bar icons
-        for e_id in entities:
-            if e_id in entity_ignore_list:
-                continue
-
-            full_id = f"{target_domain}.{e_id}"
-            TaskBarIcon(self.frame, full_id, client)
+        for entity in entities.split(','):
+            TaskBarIcon(self.frame, entity, client)
 
         return True
 
