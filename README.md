@@ -1,2 +1,2 @@
 # HomeTray
-💡 HomeTray is a small tool which lets you control your Home Assistant lights directly from your System Tray.
+Controll all your lights directly from the comfort of your System Tray.
