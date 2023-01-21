@@ -129,11 +129,17 @@ class App(wx.App):
         self.SetTopWindow(self.frame)
 
         config = configparser.ConfigParser()
+        domains = ""
+        domain_entities_ignore = ""
         try:
             config.read('config.ini')
             token = config['HASS']['Token']
             api_url = config['HASS']['ApiUrl']
             entities = config['HASS']['Entities']
+            if config.has_option('HASS', 'Domains'):
+                domains = config['HASS']['Domains']
+            if config.has_option('HASS', 'DomainEntitiesIgnore'):
+                domain_entities_ignore = config['HASS']['DomainEntitiesIgnore']
         except KeyError:
             config['HASS'] = {}
             token = config['HASS']['Token'] = ask(message='Please enter your Home Assistant Long-Lived Access Token. You can generate it at https://my.home-assistant.io/redirect/profile/.')
@@ -142,10 +148,26 @@ class App(wx.App):
             with open('config.ini', 'w') as configfile:
                 config.write(configfile)
 
+        entities = [x for x in entities.split(',') if x != '']
+        print("Entities:", entities)
+        domains = [x for x in domains.split(',') if x != '']
+        print("Domains:", domains)
+        domain_entities_ignore = [x for x in domain_entities_ignore.split(',') if x != '']
+        print("Domain Entities Ignore:", domain_entities_ignore)
+
         # init hass client
         client = Client(api_url, token, cache_session=False)
 
-        for entity in entities.split(','):
+        for domain in domains:
+            for entity in client.get_entities()[domain].entities:
+                full_id = f"{domain}.{entity}"
+                if full_id in domain_entities_ignore or full_id in entities:
+                    continue
+
+                print(f"[{domain}] Adding", full_id)
+                TaskBarIcon(self.frame, full_id, client)
+
+        for entity in entities:
             TaskBarIcon(self.frame, entity, client)
 
         return True
