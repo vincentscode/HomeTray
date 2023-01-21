@@ -84,7 +84,7 @@ class TaskBarIcon(wx.adv.TaskBarIcon):
     def update_state(self):
         entity = self.client.get_entity(entity_id=self.entity_id)
         entity_state = entity.state.state
-        entity_icon = entity.state.attributes["icon"]
+        entity_icon = entity.state.attributes["icon"] if "icon" in entity.state.attributes else "default"
         entity_name = entity.state.attributes["friendly_name"]
 
         if entity_state == "on":
