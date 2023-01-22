@@ -4,6 +4,7 @@ import sched
 from _thread import start_new_thread
 import time
 import sys
+import homeassistant_api as ha
 
 if getattr(sys, 'frozen', False):
     from hometray.iconmanager import IconManager
@@ -15,14 +16,17 @@ else:
     from settings import Settings
 
 class EntityTrayIcon(wx.adv.TaskBarIcon):
-    def __init__(self, frame, entity_id, client, icons: IconManager, config: Config, settings: Settings):
+    def __init__(self, frame, entity_id, client: ha.Client, icons: IconManager, config: Config, settings: Settings):
         super(EntityTrayIcon, self).__init__()
         self.frame = frame
         self.entity_id = entity_id
+        self.domain_id = entity_id.split(".")[0]
         self.client = client
         self.icons = icons
         self.config = config
         self.settings = settings
+
+        self.has_color_control = False
 
         self.scheduler = sched.scheduler(time.time, time.sleep)
         def update_task(scheduler): 
@@ -34,11 +38,16 @@ class EntityTrayIcon(wx.adv.TaskBarIcon):
         self.Bind(wx.adv.EVT_TASKBAR_LEFT_DOWN, self.on_left_down)
         self.Bind(wx.adv.EVT_TASKBAR_RIGHT_UP, self.on_right_up)
 
-        self.menu = wx.Menu()
-        append_menu_item(self.menu, 'Toggle', self.on_left_down, bold=True)
-        self.menu.AppendSeparator()
-        append_menu_item(self.menu, 'Configure HomeTray', lambda _: settings.configure())
-        append_menu_item(self.menu, 'Close HomeTray', self.on_exit)
+        self.domain: ha.Domain = self.client.get_domain('homeassistant')
+        self.specific_domain: ha.Domain = self.client.get_domain(self.domain_id)
+        
+        # print("Domain Services")
+        # for service_id in self.specific_domain.services:
+        #     service: ha.Service = self.specific_domain.services[service_id]
+        #     service_name = service.name
+        #     service_description = service.description
+        #     service_fields = service.fields
+        #     print(service_name, list(service_fields.keys()))
 
         self.update_state()
 
@@ -51,6 +60,7 @@ class EntityTrayIcon(wx.adv.TaskBarIcon):
         if entity_state == "on":
             if self.config.color_use_rgb_value and "rgb_color" in entity.state.attributes:
                 rgb_color = entity.state.attributes["rgb_color"]
+                self.has_color_control = True
             else:
                 rgb_color = self.config.color_on
         elif entity_state == "off":
@@ -60,19 +70,41 @@ class EntityTrayIcon(wx.adv.TaskBarIcon):
 
         self.set_icon(entity_icon, entity_state, rgb_color, entity_name)
 
+    def pick_color(self):
+        data = wx.ColourData()
+        dialog = wx.ColourDialog(self.frame, data)
+        dialog.GetColourData().SetChooseFull(True)
+
+        def set_color(color):
+            rgb = [color.Red(), color.Green(), color.Blue()]
+            self.specific_domain.turn_on(entity_id=self.entity_id, rgb_color=rgb)
+
+        dialog.Bind(wx.EVT_COLOUR_CHANGED, lambda e: set_color(e.Colour))
+        dialog.CenterOnScreen()
+        dialog.ShowModal()
+        dialog.Destroy()
+
     def set_icon(self, icon_name, icon_state, icon_color, tooltip):
         icon = self.icons.get_icon(icon_name, icon_state, icon_color)
         self.SetIcon(icon, tooltip)
 
     def on_left_down(self, _):
         self.update_state()
-        domain = self.client.get_domain('homeassistant')
-        domain.toggle(entity_id=self.entity_id)
+        self.domain.toggle(entity_id=self.entity_id)
         time.sleep(0.1)
         self.update_state()
     
     def on_right_up(self, _):
-        self.PopupMenu(self.menu)
+        menu = wx.Menu()
+        add_menu_item(menu, 'Toggle', self.on_left_down, bold=True)
+        if self.has_color_control:
+            add_menu_item(menu, 'Change Color', lambda _: self.pick_color())
+        menu.AppendSeparator()
+        add_menu_item(menu, 'Configure HomeTray', lambda _: self.settings.configure())
+        add_menu_item(menu, 'Close HomeTray', self.on_exit)
+        add_menu_item(menu, 'Change Color', lambda _: self.pick_color())
+        self.PopupMenu(menu)
+        menu.Destroy()
 
     def cleanup(self):
         if self.scheduled_event:
@@ -88,12 +120,15 @@ class EntityTrayIcon(wx.adv.TaskBarIcon):
     def on_exit(self, _):
         wx.Exit()
 
-def append_menu_item(menu: wx.Menu, label: str, func, bold: bool = False):
+def add_menu_item(menu: wx.Menu, label: str, func, bold: bool = False, position: int = -1):
     item = wx.MenuItem(menu, -1, label)
     menu.Bind(wx.EVT_MENU, func, id=item.GetId())
     if bold:
         font: wx.Font = item.GetFont()
         font.SetWeight(wx.FONTWEIGHT_HEAVY)
         item.SetFont(font)
-    menu.Append(item)
+    if position != -1:
+        menu.Insert(position, item)
+    else:
+        menu.Append(item)
     return item
