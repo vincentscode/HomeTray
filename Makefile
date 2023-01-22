@@ -23,10 +23,16 @@ rebuild: clean build
 git-pull:
 	git pull
 
+confirm-action:
+	@echo -n "Are you sure? [y/N] " && read ans && [ $${ans:-N} = y ]
+
 COMMIT_MESSAGE ?= $(shell bash -c 'read -p "Commit message: " commit_message; echo $$commit_message')
 git-commit:
 	git add .
 	git commit -m "$(COMMIT_MESSAGE)"
+
+git-push: confirm-action
+	git push
 
 git-update: git-pull git-commit
 
