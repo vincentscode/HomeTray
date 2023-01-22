@@ -34,7 +34,7 @@ git-commit:
 git-push: confirm-action
 	git push
 
-git-update: git-pull git-commit
+git-update: git-pull git-commit git-push
 
 VERSION = $(shell cat version.yaml | grep Version | cut -f2 -d " ")
 release: git-update rebuild
