@@ -59,25 +59,30 @@ class EntityTrayIcon(wx.adv.TaskBarIcon):
         
         if entity_state == "on":
             if self.config.color_use_rgb_value and "rgb_color" in entity.state.attributes:
-                rgb_color = entity.state.attributes["rgb_color"]
+                self.rgb_color = entity.state.attributes["rgb_color"]
                 self.has_color_control = True
+                
             else:
-                rgb_color = self.config.color_on
+                self.rgb_color = self.config.color_on
         elif entity_state == "off":
-            rgb_color = self.config.color_off
+            self.rgb_color = self.config.color_off
         else:
-            rgb_color = self.config.color_unknown
+            self.rgb_color = self.config.color_unknown
 
-        self.set_icon(entity_icon, entity_state, rgb_color, entity_name)
+        self.set_icon(entity_icon, entity_state, self.rgb_color, entity_name)
 
     def pick_color(self):
         data = wx.ColourData()
+        data.SetChooseFull(True)
+        color = wx.Colour()
+        color.Set(*self.config.color_on)
+        data.SetColour(color)
         dialog = wx.ColourDialog(self.frame, data)
-        dialog.GetColourData().SetChooseFull(True)
 
         def set_color(color):
             rgb = [color.Red(), color.Green(), color.Blue()]
             self.specific_domain.turn_on(entity_id=self.entity_id, rgb_color=rgb)
+            self.rgb_color = rgb
 
         dialog.Bind(wx.EVT_COLOUR_CHANGED, lambda e: set_color(e.Colour))
         dialog.CenterOnScreen()
