@@ -1,6 +1,8 @@
-Version: 1.1.0.0
+Version: 1.1.0.1
 CompanyName: Vincent Schmandt
-FileDescription: Allows you to control Home Assistant from the system tray.
+FileDescription: HomeTray
 InternalName: HomeTray
 OriginalFilename: HomeTray.exe
 ProductName: HomeTray
+Commtents: Allows you to control Home Assistant from the system tray.
+LegalCopyright: Copyright (c) 2023 Vincent Schmandt

@@ -1,3 +1,4 @@
-wxPython==4.2.0
+homeassistant-api==4.1.1.post1
 requests==2.28.2
-homeassistant-api==4.0.1
+schedule
+wxPython==4.2.0

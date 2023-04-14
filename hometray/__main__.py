@@ -1,6 +1,9 @@
+"""Main entry point for the application"""
+from __future__ import annotations
+
+import sys
 import wx
 import wx.adv
-import sys
 from homeassistant_api import Client
 
 if getattr(sys, 'frozen', False):
@@ -9,14 +12,22 @@ if getattr(sys, 'frozen', False):
     from hometray.config import Config
     from hometray.settings import Settings
 else:
-    from iconmanager import IconManager
-    from tray import EntityTrayIcon
-    from config import Config
-    from settings import Settings
+    from iconmanager import IconManager  # type:ignore
+    from tray import EntityTrayIcon  # type:ignore
+    from config import Config  # type:ignore
+    from settings import Settings  # type:ignore
 
 
 class App(wx.App):
-    def OnInit(self):
+    """Main application class"""
+
+    frame: wx.Frame
+    tray_icons: list[EntityTrayIcon]
+
+    # pylint: disable=invalid-name
+    def OnInit(self) -> bool:
+        """Called when the application is initialized."""
+
         # init GUI
         self.frame = wx.Frame(None)
         self.SetTopWindow(self.frame)
@@ -25,7 +36,7 @@ class App(wx.App):
         config = Config.load()
         settings = Settings(config)
         settings.initial_setup()
-        
+
         # init hass client
         client = Client(config.api_url, config.token, cache_session=False)
 
@@ -35,7 +46,7 @@ class App(wx.App):
         self.tray_icons = []
         for domain in config.domains:
             for entity in client.get_entities()[domain].entities:
-                full_id = f"{domain}.{entity}"
+                full_id = f'{domain}.{entity}'
                 if full_id in config.domain_entities_ignore or full_id in config.entities:
                     continue
 
@@ -46,16 +57,21 @@ class App(wx.App):
 
         return True
 
-    def OnExit(self):
+    # pylint: disable=invalid-name
+    def OnExit(self) -> int:
+        """Called when the application is exiting."""
         for tray_icon in self.tray_icons:
             tray_icon.cleanup()
 
         return 0
 
-def main():
+
+def main() -> int:
+    """Main entry point for the application"""
     app = App(False)
     app.MainLoop()
+    return 0
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())
